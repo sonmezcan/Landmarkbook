@@ -20,31 +20,30 @@ class LaunchVC: SwipeTableVC {
         super.viewDidLoad()
         loadPlaces()
         tableView.rowHeight = 100
+        
     }
 
     @IBAction func addButton(_ sender: UIBarButtonItem) {
-        
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Place", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Place", style: .default) { action in
-            //what will happen once the add button is pressed
-            
-           
+            // Yeni yer oluşturuluyor
             let newPlace = Place(context: self.context)
             newPlace.name = textField.text!
-            
-            
-            self.places.append(newPlace)
-            
+            newPlace.date = Date()  // Şu anki tarihi ekle
+
+            // Kategori kaydedin
             self.saveCategories()
+
+            // Yeni yeri yükle
+            self.loadPlaces()
         }
         alert.addTextField { alertTextField in
-            alertTextField.placeholder = "Create New Category"
+            alertTextField.placeholder = "Create New Place"
             textField = alertTextField
         }
         alert.addAction(action)
         present(alert, animated: true)
-        
     }
     
     
@@ -59,11 +58,45 @@ class LaunchVC: SwipeTableVC {
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        // Hücreyi SwipeTableViewCell olarak kullanıyoruz
+        let cell = tableView.dequeueReusableCell(withIdentifier: "cellIdentifier") as? SwipeTableViewCell ?? SwipeTableViewCell(style: .subtitle, reuseIdentifier: "cellIdentifier")
+        
+        // SwipeCellKit'in çalışması için delegate atıyoruz
+        cell.delegate = self
 
-        cell.textLabel?.text = places[indexPath.row].name ?? "no places added yet"
+        // İlgili Place nesnesini alıyoruz
+        let place = places[indexPath.row]
+        
+        // Hücreye ana başlık olarak ismi ekliyoruz
+        cell.textLabel?.text = place.name ?? "no places added yet"
+        
+//        // Fotoğrafı göster
+//           if let imageData = places[indexPath.row].imageData {
+//               cell.imageView?.image = UIImage(data: imageData) // Her şehrin fotoğrafını cell'e ata
+//           } else {
+//               cell.imageView?.image = nil // Eğer fotoğraf yoksa nil ata
+//           }
+        
+        // Alt başlık olarak tarihi eklemek
+        if let date = place.date {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .short
+            cell.detailTextLabel?.text = dateFormatter.string(from: date)
+        } else {
+            cell.detailTextLabel?.text = "No date available"
+        }
+        
+        cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 22)
+        cell.detailTextLabel?.font = UIFont.systemFont(ofSize: 20)
 
         return cell
+    }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        performSegue(withIdentifier: "toDetailsVC", sender: self)
+        
     }
     
     // MARK: - Data manipulation
@@ -92,8 +125,27 @@ class LaunchVC: SwipeTableVC {
     
     
     override func updateModel(at indexPath: IndexPath) {
+        // Core Data'dan silme işlemi
         context.delete(places[indexPath.row])
         places.remove(at: indexPath.row)
+        
+        // Değişiklikleri Core Data'ya kaydet
+        do {
+            try context.save()
+        } catch {
+            print("Error saving context after delete: \(error.localizedDescription)")
+        }
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toDetailsVC" {
+            if let destinationVC = segue.destination as? DetailsVC {
+                if let indexPath = tableView.indexPathForSelectedRow {
+                    destinationVC.place = places[indexPath.row]
+                    print("Passing place: \(places[indexPath.row].name ?? "No name")") // Debug mesajı
+                }
+            }
+        }
     }
 
    
