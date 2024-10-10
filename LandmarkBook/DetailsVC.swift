@@ -10,7 +10,7 @@ class DetailsVC: UIViewController {
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
-    var place: Place? // Place nesnesini tut
+    var place: Place? // Hold the Place object
     var date = Date()
     
     override func viewDidLoad() {
@@ -23,16 +23,15 @@ class DetailsVC: UIViewController {
             
             let coordinate = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
             placeLocation.removeAnnotations(placeLocation.annotations)
-                    let annotation = MKPointAnnotation()
-                    annotation.coordinate = coordinate
-                    annotation.title = place.name
-                    placeLocation.addAnnotation(annotation) // Haritaya ekle
-                    
-                    // Harita merkezini ayarla
-                    placeLocation.setRegion(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1000, longitudinalMeters: 1000), animated: true)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = coordinate
+            annotation.title = place.name
+            placeLocation.addAnnotation(annotation) // Add annotation to map
             
+            // Set map center
+            placeLocation.setRegion(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1000, longitudinalMeters: 1000), animated: true)
             
-            if let date = place.date { // date değişkenini place'den al
+            if let date = place.date { // Retrieve date from the Place object
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
                 dateLabel.text = dateFormatter.string(from: date)
@@ -40,26 +39,30 @@ class DetailsVC: UIViewController {
                 dateLabel.text = "No date available"
             }
 
-            // Daha önce kaydedilmiş fotoğrafı göster
+            // Display previously saved photo
             if let imageData = place.imageData {
                 placeImage.image = UIImage(data: imageData)
             }
         }
         
-        // Tap Gesture Ekle
+        // Add Tap Gesture for Image
         let tapGestureImage = UITapGestureRecognizer(target: self, action: #selector(imageTapped))
         placeImage.isUserInteractionEnabled = true
         placeImage.addGestureRecognizer(tapGestureImage)
         
+        // Add Tap Gesture for Map
         let tapGestureMap = UITapGestureRecognizer(target: self, action: #selector(mapTapped))
         placeLocation.addGestureRecognizer(tapGestureMap)
     }
+
     @IBAction func zoomInButton(_ sender: UIButton) {
         zoomIn()
     }
+    
     @IBAction func zoomOutButton(_ sender: UIButton) {
         zoomOut()
     }
+    
     func zoomIn() {
         let currentRegion = placeLocation.region
         let zoomedRegion = MKCoordinateRegion(center: currentRegion.center,
@@ -75,50 +78,51 @@ class DetailsVC: UIViewController {
                                                                      longitudeDelta: currentRegion.span.longitudeDelta * 2))
         placeLocation.setRegion(zoomedRegion, animated: true)
     }
+
     @objc func mapTapped(gesture: UITapGestureRecognizer) {
         let locationInView = gesture.location(in: placeLocation)
         let coordinate = placeLocation.convert(locationInView, toCoordinateFrom: placeLocation)
         
         placeLocation.removeAnnotations(placeLocation.annotations)
-        // Seçilen konumu kaydet
+        
+        // Save the selected location
         saveLocation(coordinate: coordinate)
         
-        // Harita üzerinde bir pin (işaretçi) göster
+        // Display a pin on the map for the selected location
         let annotation = MKPointAnnotation()
         annotation.coordinate = coordinate
-        annotation.title = "Seçilen Konum"
+        annotation.title = "Selected Location"
         placeLocation.addAnnotation(annotation)
         
         if let place = place {
-                // Daha önce kaydedilmiş konumu göster
-                let coordinate = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
-                let annotation = MKPointAnnotation()
-                annotation.coordinate = coordinate
-                annotation.title = place.name
-                placeLocation.addAnnotation(annotation)
-                placeLocation.setRegion(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1000, longitudinalMeters: 1000), animated: true)
+            // Display previously saved location
+            let coordinate = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = coordinate
+            annotation.title = place.name
+            placeLocation.addAnnotation(annotation)
+            placeLocation.setRegion(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1000, longitudinalMeters: 1000), animated: true)
         }
     }
     
     func saveLocation(coordinate: CLLocationCoordinate2D) {
         if let place = place {
-            place.lat = coordinate.latitude // Latitude için Core Data'da bir özellik eklemeyi unutma
-            place.lon = coordinate.longitude // Longitude için de aynı şekilde
+            place.lat = coordinate.latitude // Don't forget to add a latitude property to Core Data
+            place.lon = coordinate.longitude // Similarly, add a longitude property
             do {
                 try context.save()
-                print("Location saved successfully!") // Başarılı kaydetme mesajı
+                print("Location saved successfully!") // Successful save message
             } catch {
-                print("Error saving location: \(error.localizedDescription)") // Hata mesajı
+                print("Error saving location: \(error.localizedDescription)") // Error message
             }
         } else {
-            print("Place object is nil") // Hata mesajı
+            print("Place object is nil") // Error message
         }
     }
     
     @objc func imageTapped() {
-        selectPhoto() // Fotoğraf seçme fonksiyonunu çağır
+        selectPhoto() // Call the photo selection function
     }
-    
 }
 
 // MARK: - Picture
@@ -133,20 +137,21 @@ extension DetailsVC: UIImagePickerControllerDelegate, UINavigationControllerDele
     
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         if let image = info[.originalImage] as? UIImage {
-            placeImage.image = image // Seçilen resmi UIImageView'a ata
-            print("Image selected successfully") // Debug mesajı
+            placeImage.image = image // Set selected image to UIImageView
+            print("Image selected successfully") // Debug message
 
-            // place nesnesinin varlığını kontrol et
+            // Check if the Place object exists
             if place != nil {
-                savePhoto(image: image) // Fotoğrafı kaydet
+                savePhoto(image: image) // Save the photo
             } else {
-                print("Place object is nil") // Hata mesajı
+                print("Place object is nil") // Error message
             }
         } else {
-            print("Failed to select image") // Hata mesajı
+            print("Failed to select image") // Error message
         }
         dismiss(animated: true)
     }
+    
     func savePhoto(image: UIImage) {
         guard let imageData = image.jpegData(compressionQuality: 1) else {
             print("Error converting image to data")
@@ -154,15 +159,15 @@ extension DetailsVC: UIImagePickerControllerDelegate, UINavigationControllerDele
         }
 
         if let place = place {
-            place.imageData = imageData // Fotoğrafı Place nesnesine ata
+            place.imageData = imageData // Assign photo to the Place object
             do {
-                try context.save() // Core Data'da kaydet
-                print("Photo saved successfully!") // Başarılı kaydetme mesajı
+                try context.save() // Save to Core Data
+                print("Photo saved successfully!") // Successful save message
             } catch {
-                print("Error saving photo: \(error.localizedDescription)") // Hata mesajı
+                print("Error saving photo: \(error.localizedDescription)") // Error message
             }
         } else {
-            print("Place object is nil") // Hata mesajı
+            print("Place object is nil") // Error message
         }
     }
    

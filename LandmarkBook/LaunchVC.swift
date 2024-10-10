@@ -27,15 +27,15 @@ class LaunchVC: SwipeTableVC {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Place", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Place", style: .default) { action in
-            // Yeni yer oluşturuluyor
+            // Create a new place
             let newPlace = Place(context: self.context)
             newPlace.name = textField.text!
-            newPlace.date = Date()  // Şu anki tarihi ekle
+            newPlace.date = Date()  // Add the current date
 
-            // Kategori kaydedin
-            self.saveCategories()
+            
+            self.savePlaces()
 
-            // Yeni yeri yükle
+            
             self.loadPlaces()
         }
         alert.addTextField { alertTextField in
@@ -58,26 +58,26 @@ class LaunchVC: SwipeTableVC {
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        // Hücreyi SwipeTableViewCell olarak kullanıyoruz
+        // Using the cell as a SwipeTableViewCell
         let cell = tableView.dequeueReusableCell(withIdentifier: "cellIdentifier") as? SwipeTableViewCell ?? SwipeTableViewCell(style: .subtitle, reuseIdentifier: "cellIdentifier")
         
-        // SwipeCellKit'in çalışması için delegate atıyoruz
+        // Assigning delegate for SwipeCellKit functionality
         cell.delegate = self
 
-        // İlgili Place nesnesini alıyoruz
+        // Retrieve the corresponding Place object
         let place = places[indexPath.row]
         
-        // Hücreye ana başlık olarak ismi ekliyoruz
+        // Set the name as the main title of the cell
         cell.textLabel?.text = place.name ?? "no places added yet"
         
-//        // Fotoğrafı göster
+//        // Show picture
 //           if let imageData = places[indexPath.row].imageData {
-//               cell.imageView?.image = UIImage(data: imageData) // Her şehrin fotoğrafını cell'e ata
+//               cell.imageView?.image = UIImage(data: imageData) // Assign each city's photo to the cell
 //           } else {
-//               cell.imageView?.image = nil // Eğer fotoğraf yoksa nil ata
+//               cell.imageView?.image = nil // Assign nil if there is no image
 //           }
         
-        // Alt başlık olarak tarihi eklemek
+        // Set the date as a subtitle
         if let date = place.date {
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
@@ -100,7 +100,7 @@ class LaunchVC: SwipeTableVC {
     }
     
     // MARK: - Data manipulation
-    func saveCategories () {
+    func savePlaces () {
         
         do{
             try context.save()
@@ -125,11 +125,11 @@ class LaunchVC: SwipeTableVC {
     
     
     override func updateModel(at indexPath: IndexPath) {
-        // Core Data'dan silme işlemi
+        // Deleting from Core Data
         context.delete(places[indexPath.row])
         places.remove(at: indexPath.row)
         
-        // Değişiklikleri Core Data'ya kaydet
+        // Save changes to Core Data
         do {
             try context.save()
         } catch {
@@ -142,7 +142,7 @@ class LaunchVC: SwipeTableVC {
             if let destinationVC = segue.destination as? DetailsVC {
                 if let indexPath = tableView.indexPathForSelectedRow {
                     destinationVC.place = places[indexPath.row]
-                    print("Passing place: \(places[indexPath.row].name ?? "No name")") // Debug mesajı
+                    print("Passing place: \(places[indexPath.row].name ?? "No name")") // Debug message
                 }
             }
         }
